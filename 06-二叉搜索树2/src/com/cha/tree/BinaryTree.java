@@ -24,39 +24,44 @@ public class BinaryTree<E> implements BinaryTreeInfo {
 	}
 	
 	public void preorder(Visitor<E> visitor) {
+		if (visitor == null) return;
 		preorder(root, visitor);
 	}
 	
 	private void preorder(Node<E> node, Visitor<E> visitor) {
-		if (node == null || visitor == null) return;
+		if (node == null || visitor.stop) return;
 		
-		visitor.visit(node.element);
+		visitor.stop = visitor.visit(node.element);
 		preorder(node.left, visitor);
 		preorder(node.right, visitor);
 	}
 	
 	public void inorder(Visitor<E> visitor) {
+		if (visitor == null) return;
 		inorder(root, visitor);
 	}
 	
 	private void inorder(Node<E> node, Visitor<E> visitor) {
-		if (node == null || visitor == null) return;
+		if (node == null || visitor.stop) return;
 		
 		inorder(node.left, visitor);
-		visitor.visit(node.element);
+		if (visitor.stop) return;
+		visitor.stop = visitor.visit(node.element);
 		inorder(node.right, visitor);
 	}
 	
 	public void postorder(Visitor<E> visitor) {
+		if (visitor == null) return;
 		postorder(root, visitor);
 	}
 	
 	private void postorder(Node<E> node, Visitor<E> visitor) {
-		if (node == null || visitor == null) return;
+		if (node == null || visitor.stop) return;
 		
 		postorder(node.left, visitor);
 		postorder(node.right, visitor);
-		visitor.visit(node.element);
+		if (visitor.stop) return;
+		visitor.stop = visitor.visit(node.element);
 	}
 	
 	public void levelOrder(Visitor<E> visitor) {
@@ -67,7 +72,7 @@ public class BinaryTree<E> implements BinaryTreeInfo {
 		
 		while (!queue.isEmpty()) {
 			Node<E> node = queue.poll();
-			visitor.visit(node.element);
+			if (visitor.visit(node.element)) return;
 			
 			if (node.left != null) {
 				queue.offer(node.left);
@@ -81,7 +86,6 @@ public class BinaryTree<E> implements BinaryTreeInfo {
 	
 	public boolean isComplete() {
 		if (root == null) return false;
-		
 		Queue<Node<E>> queue = new LinkedList<>();
 		queue.offer(root);
 		
@@ -90,11 +94,14 @@ public class BinaryTree<E> implements BinaryTreeInfo {
 			Node<E> node = queue.poll();
 			if (leaf && !node.isLeaf()) return false;
 
-			if (node.hasTwoChildren()) {
+			if (node.left != null) {
 				queue.offer(node.left);
-				queue.offer(node.right);
-			} else if (node.left == null && node.right != null) {
+			} else if (node.right != null) {
 				return false;
+			}
+			
+			if (node.right != null) {
+				queue.offer(node.right);
 			} else { // 后面遍历的节点都必须是叶子节点
 				leaf = true;
 			}
@@ -142,10 +149,6 @@ public class BinaryTree<E> implements BinaryTreeInfo {
 		if (node == null) return 0;
 		return 1 + Math.max(height(node.left), height(node.right));
 	}
-	
-	protected Node<E> createNode(E element, Node<E> parent) {
-		return new Node<>(element, parent);
-	}
 
 	protected Node<E> predecessor(Node<E> node) {
 		if (node == null) return null;
@@ -189,8 +192,12 @@ public class BinaryTree<E> implements BinaryTreeInfo {
 		return node.parent;
 	}
 
-	public static interface Visitor<E> {
-		void visit(E element);
+	public static abstract class Visitor<E> {
+		boolean stop;
+		/**
+		 * @return 如果返回true，就代表停止遍历
+		 */
+		abstract boolean visit(E element);
 	}
 	
 	protected static class Node<E> {
@@ -209,14 +216,6 @@ public class BinaryTree<E> implements BinaryTreeInfo {
 		
 		public boolean hasTwoChildren() {
 			return left != null && right != null;
-		}
-		
-		public boolean isLeftChild() {
-			return parent != null && this == parent.left;
-		}
-		
-		public boolean isRightChild() {
-			return parent != null && this == parent.right;
 		}
 	}
 
@@ -237,6 +236,11 @@ public class BinaryTree<E> implements BinaryTreeInfo {
 
 	@Override
 	public Object string(Object node) {
-		return node;
+		Node<E> myNode = (Node<E>)node;
+		String parentString = "null";
+		if (myNode.parent != null) {
+			parentString = myNode.parent.element.toString();
+		}
+		return myNode.element + "_p(" + parentString + ")";
 	}
 }
